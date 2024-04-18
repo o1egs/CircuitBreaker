@@ -17,6 +17,8 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 public class ClientServiceApplication implements CommandLineRunner {
     @Autowired
     CircuitBreaker circuitBreaker;
+    @Autowired
+    StringRedisTemplate redisTemplate;
 
     public static void main(String[] args) {
         SpringApplication.run(ClientServiceApplication.class, args);
@@ -24,7 +26,15 @@ public class ClientServiceApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        int request = circuitBreaker.handleRequest("http://localhost:8082/calculator/div?x1=1&x2=0").get();
-        System.out.println(request);
+        redisTemplate.opsForValue().set("STATE", "CLOSE");
+        for (int i = 0; i < 10000; i++) {
+            Thread.sleep(100);
+            try {
+                int request = circuitBreaker.handleRequest("http://localhost:8082/calculator/div?x1=1&x2=1").get();
+                System.out.println(request);
+            } catch (Exception ex) {
+                System.out.println(ex.getMessage());
+            }
+        }
     }
 }

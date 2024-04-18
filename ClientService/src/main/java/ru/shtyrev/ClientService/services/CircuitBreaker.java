@@ -39,12 +39,14 @@ public class CircuitBreaker {
         CompletableFuture<Integer> result = new CompletableFuture<>();
 
         try {
-            restTemplate.getForObject(url, Integer.class);
-            result.complete(restTemplate.getForObject(url, Integer.class));
+            Integer forObject = restTemplate.getForObject(url, Integer.class);
+            result.complete(forObject);
+            return result;
         } catch (Exception e) {
-            return newSingleThreadScheduledExecutor().schedule(() -> {
+            newSingleThreadScheduledExecutor().schedule(() -> {
                 try {
-                    result.complete(restTemplate.getForObject(url, Integer.class));
+                    Integer forObject = restTemplate.getForObject(url, Integer.class);
+                    result.complete(forObject);
                 } catch (Exception e2) {
                     open();
                     throw new RuntimeException("Circuit breaker opened");
