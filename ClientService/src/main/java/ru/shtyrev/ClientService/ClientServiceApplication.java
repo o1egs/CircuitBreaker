@@ -1,24 +1,21 @@
 package ru.shtyrev.ClientService;
 
+import org.apache.catalina.LifecycleState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
-import ru.shtyrev.ClientService.services.CircuitBreaker;
+import ru.shtyrev.ClientService.cb.CircuitBreakerService;
 
-import static java.time.LocalDateTime.now;
-import static java.time.temporal.ChronoUnit.SECONDS;
+import java.util.List;
+import java.util.Random;
+
+import static ru.shtyrev.ClientService.cb.RequestType.*;
 
 @SpringBootApplication
 public class ClientServiceApplication implements CommandLineRunner {
     @Autowired
-    CircuitBreaker circuitBreaker;
-    @Autowired
-    StringRedisTemplate redisTemplate;
+    private CircuitBreakerService service;
 
     public static void main(String[] args) {
         SpringApplication.run(ClientServiceApplication.class, args);
@@ -26,15 +23,22 @@ public class ClientServiceApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        redisTemplate.opsForValue().set("STATE", "CLOSE");
-        for (int i = 0; i < 10000; i++) {
-            Thread.sleep(100);
+        Random random = new Random();
+        for (long i = 0; i < 10000; i++) {
+            Thread.sleep(4000);
+            int x1 = random.nextInt();
+            int x2 = random.nextInt();
+            x2 = x2 % 2 == 0 ? x2 : 0;
+            System.out.println(x1 + " and " + x2 + " operations:");
             try {
-                int request = circuitBreaker.handleRequest("http://localhost:8082/calculator/div?x1=1&x2=1").get();
-                System.out.println(request);
-            } catch (Exception ex) {
-                System.out.println(ex.getMessage());
+                System.out.println("DIV: " + service.request(DIV, x1, x2));
+            } catch (RuntimeException e) {
+                System.out.println(e.getMessage());
             }
+            System.out.println("SUM: " + service.request(SUM, x1, x2));
+            System.out.println("MINUS: " + service.request(MINUS, x1, x2));
+            System.out.println("MUL: " + service.request(MUL, x1, x2));
+            System.out.println();
         }
     }
 }
